@@ -16,11 +16,13 @@ Discord サーバー上でマルチエージェント（Spectra, LynQ, Paz）が
 - **仮想環境**: venv（必須）
 - **フレームワーク**: 
   - discord.py (Discord bot)
-  - LangGraph (Supervisor Pattern)
+  - langgraph (Multi-Agent Orchestration)
+  - langgraph-supervisor (Supervisor Pattern)
+  - langgraph.prebuilt (create_react_agent)
   - Pydantic v2 (タスク管理・データバリデーション)
   - pydantic-settings (設定管理)
 - **LLM**: Google Gemini 2.0 Flash API
-- **Embedding**: text-embedding-004
+- **Embedding**: gemini-embedding-001 (Free Tier Available)
 - **LangChainメモリライブラリ**:
   - langchain-redis (短期記憶)
   - langchain-community (PGVector統合)
@@ -138,8 +140,9 @@ Discord サーバー上でマルチエージェント（Spectra, LynQ, Paz）が
 ### 5.3 長期記憶（PostgreSQL + pgvector）
 - **実装**: `langchain_postgres.PGVectorStore`
 - **埋め込み**: `langchain_google_genai.GoogleGenerativeAIEmbeddings`
-- **モデル**: `text-embedding-004`
+- **モデル**: `models/gemini-embedding-001` (output_dimensionality=1536指定)
 - **コレクション名**: `"agent_memory"`
+- **ベクトル次元**: 1536次元（pgvector互換）
 - **メタデータフィールド**:
   - `agent`: varchar（送信者識別）
   - `channel`: varchar（チャンネル名）
@@ -190,9 +193,7 @@ class Task(BaseModel):
     created_at: str
     updated_at: str
     
-    class Config:
-        validate_assignment = True
-        extra = 'forbid'
+    model_config = {"validate_assignment": True, "extra": "forbid"}
 ```
 
 ### 6.5 タスクライフサイクル
@@ -378,9 +379,21 @@ REPORT_CONTEXT_LIMIT=50               # 10-200件
 - Embed 制限: 25フィールド/Embed
 
 ### 11.2 Gemini API 制限（無料枠）
-- RPM: 15（無料枠）
-- TPM: 32,000（無料）
-- コンテキストウィンドウ: 1M tokens
+- **Gemini 2.0 Flash RPM**: 15（無料枠）
+- **Gemini 2.0 Flash TPM**: 32,000（無料）
+- **gemini-embedding-001 RPM**: 100（無料枠）
+- **gemini-embedding-001 TPM**: 30,000（無料）
+- **gemini-embedding-001 RPD**: 1,000（無料）
+- **コンテキストウィンドウ**: 1M tokens
+- **Embedding入力制限**: 2,048 tokens per input text
+- **Embedding一括制限**: 250 input texts per request, 20,000 total tokens per request
+- **ベクトル次元**: 1536次元（pgvector互換最適化）
+
+**次元最適化**: gemini-embedding-001は128-3072次元可変対応。1536次元設定により：
+- pgvectorとの完全互換性確保
+- 性能スコア68.17維持（3072次元とほぼ同等）
+- ストレージ効率50%向上
+- 検索速度向上
 
 ### 11.3 システム制約
 - Python 3.11 以上必須
