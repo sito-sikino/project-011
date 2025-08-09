@@ -79,10 +79,11 @@
   - 依存: requirements.txt
   - 完了日: 2025-08-09 15:59:28 (t-wada式TDD実装完了、全13テスト合格、セキュリティ最適化済み)
 
-- [ ] PostgreSQL初期化スクリプト作成
+- [x] PostgreSQL初期化スクリプト作成 ✅
   - 受け入れ条件: pgvector拡張有効化、agent_memoryテーブル、1536次元vector型
   - 優先度: 高
   - 依存: docker-compose.yml
+  - 完了日: 2025-08-09 16:05 (t-wada式TDD実装完了、全11テスト合格)
 
 - [ ] Docker環境動作確認テスト
   - 受け入れ条件: `docker-compose up`で全サービス起動確認
