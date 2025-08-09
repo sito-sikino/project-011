@@ -25,7 +25,7 @@ import pytest
 import asyncio
 import asyncpg
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from app.core.database import DatabaseManager, get_db_manager
+from app.core.database import DatabaseManager, get_db_manager, InitializationError
 from app.core.settings import get_settings, reset_settings
 import os
 from typing import List
@@ -410,7 +410,7 @@ class TestErrorHandling:
             db_manager = DatabaseManager(settings)
             
             # プールが未初期化のまま操作実行
-            with pytest.raises(RuntimeError) as exc_info:
+            with pytest.raises(InitializationError) as exc_info:
                 await db_manager.execute("SELECT 1")
             
             assert "Database not initialized" in str(exc_info.value)

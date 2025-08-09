@@ -411,15 +411,30 @@ def reset_db_manager() -> None:
 
 
 # 利便性のためのヘルパー関数群
-async def initialize_database() -> DatabaseManager:
+async def initialize_database(auto_migrate: bool = True) -> DatabaseManager:
     """
     データベース初期化ヘルパー
     
+    Args:
+        auto_migrate: マイグレーションの自動実行（デフォルト: True）
+    
     Returns:
         DatabaseManager: 初期化済みデータベースマネージャー
+        
+    Phase 3.2統合: 初期化時の自動マイグレーション実行
     """
     db_manager = get_db_manager()
     await db_manager.initialize()
+    
+    # 自動マイグレーション実行
+    if auto_migrate:
+        try:
+            await run_migrations()
+            logger.info("Database initialized with migrations applied")
+        except Exception as e:
+            logger.warning(f"Migration auto-execution failed: {e}")
+            # マイグレーション失敗でもデータベース初期化は継続
+    
     return db_manager
 
 
@@ -441,6 +456,68 @@ async def close_database() -> None:
     db_manager = get_db_manager()
     await db_manager.close()
     logger.info("Database closed successfully")
+
+
+async def run_migrations() -> None:
+    """
+    データベースマイグレーション実行ヘルパー
+    
+    未適用のマイグレーションをすべて実行する
+    Phase 3.2統合: MigrationManager連携
+    """
+    try:
+        from app.core.migrations import get_migration_manager
+        
+        migration_manager = get_migration_manager()
+        await migration_manager.apply_all_migrations()
+        logger.info("All database migrations applied successfully")
+        
+    except Exception as e:
+        error_msg = f"Migration execution failed: {e}"
+        logger.error(error_msg)
+        raise InitializationError(error_msg) from e
+
+
+async def rollback_migration(version: str) -> None:
+    """
+    特定マイグレーションのロールバックヘルパー
+    
+    Args:
+        version: ロールバックするマイグレーションバージョン
+        
+    Phase 3.2統合: MigrationManager連携
+    """
+    try:
+        from app.core.migrations import get_migration_manager
+        
+        migration_manager = get_migration_manager()
+        await migration_manager.rollback_migration(version)
+        logger.info(f"Migration {version} rolled back successfully")
+        
+    except Exception as e:
+        error_msg = f"Migration rollback failed: {e}"
+        logger.error(error_msg)
+        raise QueryError(error_msg) from e
+
+
+async def check_migration_status() -> List[Dict[str, Any]]:
+    """
+    マイグレーション状態確認ヘルパー
+    
+    Returns:
+        List[Dict[str, Any]]: 適用済みマイグレーション一覧
+        
+    Phase 3.2統合: MigrationManager連携
+    """
+    try:
+        from app.core.migrations import get_migration_manager
+        
+        migration_manager = get_migration_manager()
+        return await migration_manager.get_applied_migrations()
+        
+    except Exception as e:
+        logger.error(f"Migration status check failed: {e}")
+        return []
 
 
 def validate_connection_url(url: str) -> bool:

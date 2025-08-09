@@ -306,11 +306,66 @@ class ReportConfig(BaseSettings):
     )
 
 
+class TaskConfig(BaseSettings):
+    """
+    タスク管理関連設定
+    
+    Redis キュー、TTL設定、リトライ機構設定
+    Field制約による数値範囲バリデーション実装
+    """
+    model_config = SettingsConfigDict(
+        env_prefix="TASK_", 
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+    
+    # TASK_MAX_QUEUE_SIZE: 100-10000、デフォルト1000
+    max_queue_size: int = Field(
+        default=1000,
+        ge=100,
+        le=10000,
+        description="タスクキューの最大サイズ"
+    )
+    
+    # TASK_DEFAULT_TTL: 300-86400秒、デフォルト3600
+    default_ttl: int = Field(
+        default=3600,
+        ge=300,
+        le=86400,
+        description="タスクのデフォルトTTL（秒）"
+    )
+    
+    # TASK_MAX_RETRY_COUNT: 0-10、デフォルト3
+    max_retry_count: int = Field(
+        default=3,
+        ge=0,
+        le=10,
+        description="タスクの最大リトライ回数"
+    )
+    
+    # TASK_BASE_RETRY_DELAY: 1-60秒、デフォルト2
+    base_retry_delay: int = Field(
+        default=2,
+        ge=1,
+        le=60,
+        description="リトライの基本遅延時間（秒）"
+    )
+    
+    # TASK_CHANNEL_LIMIT: 10-1000、デフォルト100
+    channel_limit: int = Field(
+        default=100,
+        ge=10,
+        le=1000,
+        description="チャンネル別タスク制限数"
+    )
+
+
 class Settings(BaseSettings):
     """
     Discord Multi-Agent System メイン設定クラス
     
-    8つの設定グループを統合管理:
+    9つの設定グループを統合管理:
     - discord: Discord Bot関連（3体のBotトークン管理）
     - gemini: Gemini API関連（APIキー、レート制限）
     - database: データベース関連（PostgreSQL + pgvector、Redis）
@@ -320,6 +375,7 @@ class Settings(BaseSettings):
     - agent: エージェント関連（Spectra、LynQ、Paz人格）
     - channel: チャンネル関連（Discord チャンネル制御）
     - report: レポート関連（日報生成、統計処理）
+    - task: タスク管理関連（Redis キュー、TTL、リトライ機構）
     
     環境変数からの自動読み込み、型安全性確保、
     Pydantic v2 BaseSettings による統合設定管理
@@ -426,6 +482,7 @@ class Settings(BaseSettings):
     agent: AgentConfig = Field(default_factory=AgentConfig)
     channel: ChannelConfig = Field(default_factory=ChannelConfig)
     report: ReportConfig = Field(default_factory=ReportConfig)
+    task: TaskConfig = Field(default_factory=TaskConfig)
 
 
 # グローバル設定インスタンス（シングルトンパターン）
