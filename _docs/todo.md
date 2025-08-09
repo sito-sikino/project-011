@@ -85,10 +85,11 @@
   - 依存: docker-compose.yml
   - 完了日: 2025-08-09 16:05 (t-wada式TDD実装完了、全11テスト合格)
 
-- [ ] Docker環境動作確認テスト
-  - 受け入れ条件: `docker-compose up`で全サービス起動確認
+- [x] Docker環境動作確認テスト ✅
+  - 受け入れ条件: `docker-compose up`で全サービス起動確認、Redis・PostgreSQL・appサービス正常起動、ヘルスチェック正常動作、PostgreSQL初期化スクリプト自動実行確認
   - 優先度: 高
   - 依存: Docker関連ファイル
+  - 完了日: 2025-08-09 16:25:45 (t-wada式TDD実装完了、16/16テスト合格、統合検証スクリプト実装、Perfect Score達成)
 
 ## Phase 2: 設定管理システム
 
