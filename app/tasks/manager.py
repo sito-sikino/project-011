@@ -420,6 +420,25 @@ class TaskManager:
             logger.error(f"Channel-based task retrieval failed: {e}")
             return []
     
+    async def get_active_task(self) -> Optional[TaskModel]:
+        """アクティブタスク取得（現在実行中・保留中のタスク）"""
+        try:
+            query = """
+            SELECT id, title, description, status, priority, agent_id, channel_id, 
+                   created_at, updated_at, metadata
+            FROM tasks 
+            WHERE status IN ($1, $2)
+            ORDER BY created_at ASC
+            LIMIT 1
+            """
+            rows = await self.db_manager.fetch(query, TaskStatus.PENDING.value, TaskStatus.IN_PROGRESS.value)
+            if rows:
+                return TaskModel(**rows[0])
+            return None
+        except Exception as e:
+            logger.error(f"Active task retrieval failed: {e}")
+            return None
+    
     # UPDATE operations
     async def update_task(
         self,
