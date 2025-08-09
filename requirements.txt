@@ -43,5 +43,6 @@ asyncio                          # Async runtime (Python standard library)
 redis                            # In-memory data store and message broker
 redis[hiredis]                   # Redis with high-performance hiredis parser
 psycopg2-binary                  # PostgreSQL adapter (binary distribution)
+psycopg[binary]                  # Modern PostgreSQL adapter for langchain-postgres
 asyncpg                          # Async PostgreSQL adapter
 pgvector                         # Vector similarity search for PostgreSQL
