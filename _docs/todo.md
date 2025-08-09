@@ -67,15 +67,17 @@
   - 完了日: 2025-08-09 15:44:51 (t-wada式TDD実装完了、全11テスト合格)
 
 ### 1.2 Docker環境構築
-- [ ] docker-compose.yml作成
+- [x] docker-compose.yml作成 ✅
   - 受け入れ条件: Redis、PostgreSQL、appサービス定義、ヘルスチェック設定
   - 優先度: 高
   - 依存: プロジェクト構造
+  - 完了日: 2025-08-09 15:52:32 (t-wada式TDD実装完了)
 
-- [ ] Dockerfile作成
-  - 受け入れ条件: Python 3.11基盤、requirements.txtインストール、エントリポイント設定
+- [x] Dockerfile作成 ✅
+  - 受け入れ条件: Python 3.11基盤、requirements.txtインストール、エントリポイント設定、マルチステージビルド、非rootユーザー実行
   - 優先度: 高
   - 依存: requirements.txt
+  - 完了日: 2025-08-09 15:59:28 (t-wada式TDD実装完了、全13テスト合格、セキュリティ最適化済み)
 
 - [ ] PostgreSQL初期化スクリプト作成
   - 受け入れ条件: pgvector拡張有効化、agent_memoryテーブル、1536次元vector型
