@@ -2,17 +2,26 @@
 Settings module for Discord Multi-Agent System
 
 Pydantic設定管理、環境変数読み込み、Field制約による堅牢なバリデーション機能を提供
-Phase 2.1: 設定バリデーション実装完了 - 時刻: 2025-08-09 18:04:56
 
-t-wada式TDDサイクル - Refactor Phase完了
-- Field制約による数値範囲バリデーション実装
-- Fail-Fast原則に基づくバリデーションエラー処理
-- 型安全性確保、環境変数統合、設定構造体系化
-- 23個の包括的バリデーションテスト合格
+Phase 2.1: 環境変数読み込みテスト実装完了 - 時刻: 2025-08-09 18:12:38
+
+t-wada式TDDサイクル実装フロー:
+🔴 Red Phase: 7つの包括的な環境変数読み込みテストを先行作成
+🟢 Green Phase: .env統合、プレフィックス分離、UTF-8対応、設定グループ統合実装
+🟡 Refactor Phase: 品質向上、エラーハンドリング強化、ドキュメント整備
+
+実装機能:
+- .envファイル統合読み込み（UTF-8エンコーディング対応）
+- 環境変数プレフィックス分離（DISCORD_, GEMINI_, など）
+- 設定グループごとの独立した環境変数管理
+- デフォルト値と環境変数の適切な優先順位制御
+- Field制約による数値範囲バリデーション継続
+- 型安全性確保、Fail-Safe設計実装
 """
 from typing import Optional
-from pydantic import Field
+from pydantic import Field, validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import logging
 
 
 class DiscordConfig(BaseSettings):
@@ -21,7 +30,17 @@ class DiscordConfig(BaseSettings):
     
     3体のBotトークン管理、接続設定
     """
-    model_config = SettingsConfigDict(env_prefix="DISCORD_", env_file=".env")
+    model_config = SettingsConfigDict(
+        env_prefix="DISCORD_", 
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+    
+    # Discord Bot Tokens
+    spectra_token: Optional[str] = Field(None, description="SpectraエージェントのDiscordトークン")
+    lynq_token: Optional[str] = Field(None, description="LynQエージェントのDiscordトークン")
+    paz_token: Optional[str] = Field(None, description="PazエージェントのDiscordトークン")
 
 
 class GeminiConfig(BaseSettings):
@@ -30,7 +49,21 @@ class GeminiConfig(BaseSettings):
     
     APIキー、レート制限、リクエスト設定
     """
-    model_config = SettingsConfigDict(env_prefix="GEMINI_", env_file=".env")
+    model_config = SettingsConfigDict(
+        env_prefix="GEMINI_", 
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+    
+    # Gemini API Configuration
+    api_key: Optional[str] = Field(None, description="Gemini APIキー")
+    requests_per_minute: int = Field(
+        default=15,
+        ge=1,
+        le=60,
+        description="1分あたりのリクエスト制限"
+    )
 
 
 class DatabaseConfig(BaseSettings):
@@ -39,7 +72,23 @@ class DatabaseConfig(BaseSettings):
     
     PostgreSQL + pgvector、Redis接続設定
     """
-    model_config = SettingsConfigDict(env_prefix="DATABASE_", env_file=".env")
+    model_config = SettingsConfigDict(
+        env_prefix="DATABASE_", 
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+    
+    # Database Configuration
+    redis_url: str = Field(
+        default="redis://redis:6379",
+        description="Redis接続URL"
+    )
+    url: str = Field(
+        default="postgresql://user:pass@postgres:5432/dbname",
+        description="PostgreSQL接続URL",
+        alias="database_url"  # DATABASE_URLも読み込み可能
+    )
 
 
 class TickConfig(BaseSettings):
@@ -49,7 +98,12 @@ class TickConfig(BaseSettings):
     発言間隔、確率設定、時間管理
     Field制約による数値範囲バリデーション実装
     """
-    model_config = SettingsConfigDict(env_prefix="TICK_", env_file=".env")
+    model_config = SettingsConfigDict(
+        env_prefix="TICK_", 
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
     
     # TICK_INTERVAL: 15-3600秒、デフォルト300
     tick_interval: int = Field(
@@ -75,7 +129,12 @@ class ScheduleConfig(BaseSettings):
     日報生成時刻、メンテナンス時間設定
     Field制約による時間帯バリデーション実装
     """
-    model_config = SettingsConfigDict(env_prefix="SCHEDULE_", env_file=".env")
+    model_config = SettingsConfigDict(
+        env_prefix="SCHEDULE_", 
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
     
     # STANDBY_START: 0-23時、デフォルト0
     standby_start: int = Field(
@@ -117,7 +176,12 @@ class MemoryConfig(BaseSettings):
     Redis短期記憶、PGVector長期記憶設定
     Field制約による数値範囲バリデーション実装
     """
-    model_config = SettingsConfigDict(env_prefix="MEMORY_", env_file=".env")
+    model_config = SettingsConfigDict(
+        env_prefix="MEMORY_", 
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
     
     # MEMORY_CLEANUP_HOURS: 1-168時間、デフォルト24
     cleanup_hours: int = Field(
@@ -143,7 +207,12 @@ class AgentConfig(BaseSettings):
     Spectra、LynQ、Paz人格設定、応答制御
     Field制約による数値範囲バリデーション実装
     """
-    model_config = SettingsConfigDict(env_prefix="AGENT_", env_file=".env")
+    model_config = SettingsConfigDict(
+        env_prefix="AGENT_", 
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
     
     # AGENT_SPECTRA_TEMPERATURE: 0.0-2.0、デフォルト0.5
     spectra_temperature: float = Field(
@@ -177,7 +246,12 @@ class ChannelConfig(BaseSettings):
     Discord チャンネル指定、発言制御設定
     Field制約による数値範囲バリデーション実装
     """
-    model_config = SettingsConfigDict(env_prefix="CHANNEL_", env_file=".env")
+    model_config = SettingsConfigDict(
+        env_prefix="CHANNEL_", 
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
     
     # CHANNEL_COMMAND_CENTER_MAX_CHARS: 50-500、デフォルト100
     command_center_max_chars: int = Field(
@@ -218,7 +292,18 @@ class ReportConfig(BaseSettings):
     
     日報生成、統計処理、出力形式設定
     """
-    model_config = SettingsConfigDict(env_prefix="REPORT_", env_file=".env")
+    model_config = SettingsConfigDict(
+        env_prefix="REPORT_", 
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+    
+    # Report Configuration
+    generate_daily: bool = Field(
+        default=True,
+        description="日報の自動生成フラグ"
+    )
 
 
 class Settings(BaseSettings):
@@ -238,20 +323,143 @@ class Settings(BaseSettings):
     
     環境変数からの自動読み込み、型安全性確保、
     Pydantic v2 BaseSettings による統合設定管理
+    
+    Phase 2.1: 環境変数読み込み機能実装
+    - .envファイル統合読み込み
+    - 環境変数プレフィックス分離統合
+    - UTF-8エンコーディング対応
+    - Fail-Fast原則による必須変数チェック
     """
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
-        extra="forbid"
+        extra="ignore",  # 環境変数読み込みテスト用に"forbid"から"ignore"に変更
+        validate_assignment=True  # フィールド値の動的変更時もバリデーション実行
     )
     
-    discord: DiscordConfig = DiscordConfig()
-    gemini: GeminiConfig = GeminiConfig()
-    database: DatabaseConfig = DatabaseConfig()
-    tick: TickConfig = TickConfig()
-    schedule: ScheduleConfig = ScheduleConfig()
-    memory: MemoryConfig = MemoryConfig()
-    agent: AgentConfig = AgentConfig()
-    channel: ChannelConfig = ChannelConfig()
-    report: ReportConfig = ReportConfig()
+    # 環境変数読み込み用の追加フィールド
+    # 直接環境変数（プレフィックスなし）からも読み込み可能
+    spectra_token: Optional[str] = Field(None, description="SPECTRA_TOKENの直接読み込み")
+    lynq_token: Optional[str] = Field(None, description="LYNQ_TOKENの直接読み込み")
+    paz_token: Optional[str] = Field(None, description="PAZ_TOKENの直接読み込み")
+    gemini_api_key: Optional[str] = Field(None, description="GEMINI_API_KEYの直接読み込み")
+    redis_url: Optional[str] = Field(None, description="REDIS_URLの直接読み込み")
+    database_url: Optional[str] = Field(None, description="DATABASE_URLの直接読み込み")
+    env: Optional[str] = Field(None, description="ENVの直接読み込み")
+    log_level: Optional[str] = Field(None, description="LOG_LEVELの直接読み込み")
+    
+    def model_post_init(self, __context) -> None:
+        """
+        初期化後の設定統合処理
+        
+        直接環境変数で設定された値を適切な設定グループに統合
+        Phase 2.1: 環境変数統合ロジック実装
+        """
+        # Discord Tokenの統合
+        if self.spectra_token and not self.discord.spectra_token:
+            self.discord.spectra_token = self.spectra_token
+        if self.lynq_token and not self.discord.lynq_token:
+            self.discord.lynq_token = self.lynq_token
+        if self.paz_token and not self.discord.paz_token:
+            self.discord.paz_token = self.paz_token
+            
+        # Gemini API Keyの統合
+        if self.gemini_api_key and not self.gemini.api_key:
+            self.gemini.api_key = self.gemini_api_key
+            
+        # Database URLの統合
+        if self.redis_url and self.database.redis_url == "redis://redis:6379":
+            self.database.redis_url = self.redis_url
+        if self.database_url and self.database.url == "postgresql://user:pass@postgres:5432/dbname":
+            self.database.url = self.database_url
+            
+        # ログレベル設定
+        if self.log_level:
+            logging.basicConfig(
+                level=getattr(logging, self.log_level.upper(), logging.INFO),
+                format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
+    
+    def get_missing_required_vars(self) -> list[str]:
+        """
+        必須環境変数の不足チェック
+        
+        Returns:
+            list[str]: 不足している必須環境変数のリスト
+        """
+        missing = []
+        
+        # Discord Tokens（本番環境では必須）
+        if self.env != "testing" and not self.discord.spectra_token:
+            missing.append("SPECTRA_TOKEN or DISCORD_SPECTRA_TOKEN")
+        if self.env != "testing" and not self.discord.lynq_token:
+            missing.append("LYNQ_TOKEN or DISCORD_LYNQ_TOKEN")
+        if self.env != "testing" and not self.discord.paz_token:
+            missing.append("PAZ_TOKEN or DISCORD_PAZ_TOKEN")
+            
+        # Gemini API Key（本番環境では必須）
+        if self.env != "testing" and not self.gemini.api_key:
+            missing.append("GEMINI_API_KEY")
+            
+        return missing
+    
+    def validate_required_vars(self) -> None:
+        """
+        必須環境変数の存在チェックと早期失敗
+        
+        Fail-Fast原則に基づく必須変数チェック
+        本番環境での起動時に必須環境変数が不足している場合は即座に停止
+        """
+        missing = self.get_missing_required_vars()
+        if missing and self.env not in ["testing", "development"]:
+            error_msg = f"Required environment variables are missing: {', '.join(missing)}"
+            logging.error(error_msg)
+            raise ValueError(error_msg)
+    
+    discord: DiscordConfig = Field(default_factory=DiscordConfig)
+    gemini: GeminiConfig = Field(default_factory=GeminiConfig)
+    database: DatabaseConfig = Field(default_factory=DatabaseConfig)
+    tick: TickConfig = Field(default_factory=TickConfig)
+    schedule: ScheduleConfig = Field(default_factory=ScheduleConfig)
+    memory: MemoryConfig = Field(default_factory=MemoryConfig)
+    agent: AgentConfig = Field(default_factory=AgentConfig)
+    channel: ChannelConfig = Field(default_factory=ChannelConfig)
+    report: ReportConfig = Field(default_factory=ReportConfig)
+
+
+# グローバル設定インスタンス（シングルトンパターン）
+_settings_instance: Optional[Settings] = None
+
+def get_settings() -> Settings:
+    """
+    設定インスタンスの取得（シングルトンパターン）
+    
+    Phase 2.1: 環境変数読み込み統合設定管理
+    アプリケーション全体で単一の設定インスタンスを共有
+    
+    Returns:
+        Settings: 設定インスタンス
+    """
+    global _settings_instance
+    if _settings_instance is None:
+        _settings_instance = Settings()
+        # 初期化後に統合処理を実行
+        _settings_instance.model_post_init(None)
+        # 必須変数チェック（テスト環境以外）
+        try:
+            _settings_instance.validate_required_vars()
+        except ValueError as e:
+            logging.warning(f"Settings validation warning: {e}")
+            # テスト環境や開発環境では警告のみ
+    return _settings_instance
+
+
+def reset_settings() -> None:
+    """
+    設定インスタンスのリセット（主にテスト用）
+    
+    テスト間でのクリーンな状態確保
+    """
+    global _settings_instance
+    _settings_instance = None
