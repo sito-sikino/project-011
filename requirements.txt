@@ -1,0 +1,45 @@
+# Discord Multi-Agent System - Phase 1.2: Requirements
+# 必要なライブラリとその固定バージョン
+# 再現性確保のためバージョンを厳格に管理
+# 
+# Created: 2025-08-09 (Phase 1.2)
+# Target: Discord Multi-Agent with LangGraph Supervisor Pattern
+
+# ==============================================================================
+# Core Discord Integration
+# ==============================================================================
+discord.py==2.4.0                 # Discord API client (stable version)
+
+# ==============================================================================
+# LangChain Framework & Graph Orchestration
+# ==============================================================================
+langgraph==0.2.74                 # Multi-agent graph orchestration framework
+langgraph-supervisor              # Supervisor pattern implementation
+langchain-redis                   # Redis integration for LangChain
+langchain-postgres               # PostgreSQL integration for LangChain
+langchain-google-genai           # Google Generative AI integration
+langchain-core                   # Core LangChain abstractions
+
+# ==============================================================================
+# Data Validation & Configuration Management
+# ==============================================================================
+pydantic==2.8.2                  # Data validation (compatible with LangChain)
+pydantic-settings                # Settings management with Pydantic
+python-dotenv                    # Environment variable loading
+
+# ==============================================================================
+# Data Processing & Analysis
+# ==============================================================================
+pandas                           # Data manipulation and analysis
+
+# ==============================================================================
+# Asynchronous Programming
+# ==============================================================================
+asyncio                          # Async runtime (Python standard library)
+
+# ==============================================================================
+# Database & Caching Infrastructure
+# ==============================================================================
+redis                            # In-memory data store and message broker
+psycopg2-binary                  # PostgreSQL adapter (binary distribution)
+pgvector                         # Vector similarity search for PostgreSQL
