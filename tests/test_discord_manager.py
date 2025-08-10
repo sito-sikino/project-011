@@ -220,14 +220,15 @@ class TestDiscordMessageProcessor:
         message_processor.app.ainvoke.assert_not_called()
     
     async def test_process_message_error_isolation(self, message_processor, mock_discord_message):
-        """メッセージ処理エラー隔離テスト"""
+        """メッセージ処理エラー隔離テスト - Fail-Fast原則準拠"""
         # メモリシステムでエラーを発生させる
         message_processor.memory_system.add_message.side_effect = Exception("Memory error")
         
-        # エラーが発生してもシステムは継続すること
-        await message_processor.process_message(mock_discord_message)
+        # Fail-Fast原則により、sys.exit(1)が呼ばれることを期待
+        with pytest.raises(SystemExit, match="1"):
+            await message_processor.process_message(mock_discord_message)
         
-        # LangGraph は呼ばれないが、システムは停止しない
+        # エラー発生後はLangGraphは呼ばれない
         message_processor.app.ainvoke.assert_not_called()
     
     async def test_message_queue_fifo_processing(self, message_processor):
@@ -386,6 +387,9 @@ class TestSimplifiedTickManager:
     @pytest.mark.asyncio
     async def test_tick_processing_active_mode(self, tick_manager):
         """アクティブモードでのティック処理テスト"""
+        # テスト環境設定（確率制御を100%にする）
+        tick_manager.settings.env = "test"
+        
         # アクティブモードをモック
         with patch("app.discord_manager.manager.get_current_mode", return_value="ACTIVE"):
             # 1回のティック処理を実行
@@ -406,6 +410,9 @@ class TestSimplifiedTickManager:
     
     async def test_daily_report_processing_mode(self, tick_manager):
         """日報処理モードテスト"""
+        # テスト環境設定（確率制御を100%にする）
+        tick_manager.settings.env = "test"
+        
         # 日報処理モードをモック
         with patch("app.discord_manager.manager.get_current_mode", return_value="PROCESSING"):
             # メモリシステム、レポート生成をモック
