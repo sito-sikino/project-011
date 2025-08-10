@@ -232,38 +232,25 @@ class StructuredLogger:
 
     def log_discord_message(self, log: DiscordMessageLog):
         """Discordメッセージログ出力"""
-        future = self._executor.submit(
+        self._executor.submit(
             self._write_to_file, log.to_json(), self.settings.discord_log_path
         )
-        # テスト用：即座に完了を待つ
-        if hasattr(self, "_sync_mode") and self._sync_mode:
-            future.result()
 
     def log_system(self, log: SystemLog):
         """システムログ出力"""
-        future = self._executor.submit(
+        self._executor.submit(
             self._write_to_file, log.to_json(), self.settings.system_log_path
         )
-        # テスト用：即座に完了を待つ
-        if hasattr(self, "_sync_mode") and self._sync_mode:
-            future.result()
 
     def log_error(self, log: ErrorLog):
         """エラーログ出力"""
-        future = self._executor.submit(
+        self._executor.submit(
             self._write_to_file, log.to_json(), self.settings.error_log_path
         )
-        # テスト用：即座に完了を待つ
-        if hasattr(self, "_sync_mode") and self._sync_mode:
-            future.result()
 
-    def set_sync_mode(self, sync: bool = True):
-        """テスト用同期モード設定"""
-        self._sync_mode = sync
-
-    def shutdown(self):
+    def shutdown(self, wait: bool = True):
         """リソース解放"""
-        self._executor.shutdown(wait=True)
+        self._executor.shutdown(wait=wait)
 
 
 # シングルトンインスタンス

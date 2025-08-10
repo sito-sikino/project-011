@@ -141,7 +141,6 @@ class TestFileOutput:
             )
             
             logger = StructuredLogger(settings=test_config)
-            logger.set_sync_mode(True)  # 同期モードでテスト
             
             log = SystemLog(
                 level=LogLevel.INFO,
@@ -151,6 +150,9 @@ class TestFileOutput:
             
             # ログ出力（内部でディレクトリ作成される）
             logger.log_system(log)
+            
+            # 非同期処理完了を待つ
+            logger.shutdown(wait=True)
             
             # ディレクトリとファイルが作成されていることを確認
             assert log_path.parent.exists()
@@ -198,8 +200,8 @@ class TestFileOutput:
             # 全ログが記録されたことを確認
             assert len(results) == 30
             
-            # 少し待って非同期処理完了を待つ
-            time.sleep(0.5)
+            # 非同期処理完了を待つ
+            logger.shutdown(wait=True)
             
             # ファイル内容確認（実際にログが書き込まれている）
             if log_path.exists():
@@ -227,7 +229,6 @@ class TestRotation:
             )
             
             logger = StructuredLogger(settings=test_config)
-            logger.set_sync_mode(True)  # 同期モードでテスト
             
             # 大きなログを大量書き込みして1MB超過させる
             for i in range(100):
@@ -238,6 +239,9 @@ class TestRotation:
                     data={"large_data": "x" * 1000}  # 1KB程度
                 )
                 logger.log_system(large_log)
+            
+            # 非同期処理完了を待つ
+            logger.shutdown(wait=True)
             
             # ローテーションが発生していることを確認
             # 実装では単純にバックアップファイル(.1)が作成される
@@ -261,8 +265,8 @@ class TestRotation:
                     )
                     logger.log_system(log)
             
-            # 非同期処理完了待ち
-            time.sleep(2.0)
+            # 非同期処理完了を待つ
+            logger.shutdown(wait=True)
             
             # バックアップファイル数確認
             backup_files = list(log_path.parent.glob("backup_test.jsonl.*"))
@@ -378,8 +382,8 @@ class TestStructuredLogger:
             )
             logger.log_error(error_log)
             
-            # 非同期処理完了待ち
-            time.sleep(0.2)
+            # 非同期処理完了を待つ
+            logger.shutdown(wait=True)
     
     def test_singleton_get_logger(self):
         """get_loggerシングルトンテスト - 🔴失敗テスト"""
@@ -463,6 +467,9 @@ class TestIntegrationPreparation:
             action="integration_test"
         )
         logger.log_system(system_log)
+        
+        # 非同期処理完了を確認
+        logger.shutdown(wait=True)
     
     def test_discord_manager_integration_ready(self):
         """SimplifiedDiscordManager統合準備確認テスト - 🔴失敗テスト"""
@@ -476,5 +483,9 @@ class TestIntegrationPreparation:
             message="integration test message"
         )
         
-        logger = get_logger()
+        # 新しいインスタンスを作成（シングルトン回避）
+        logger = StructuredLogger()
         logger.log_discord_message(discord_log)
+        
+        # 非同期処理完了を確認
+        logger.shutdown(wait=True)
