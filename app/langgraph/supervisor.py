@@ -47,6 +47,11 @@ class DiscordState(MessagesState):
     # タスク情報
     task_description: Optional[str]
     task_channel: Optional[str]
+    
+    # Phase 9: 自発発言システム用フィールド
+    message_type: Optional[Literal["normal", "mention", "command", "tick"]]
+    tick_probability: Optional[float]
+    context_relevance_score: Optional[float]
 
 
 # Discord送信ツール（グローバルからDiscordManagerを参照）
@@ -123,14 +128,63 @@ class DiscordSupervisor:
         
         logger.info("Discord Supervisor initialized with LangGraph")
     
+    def _weighted_random_choice(self, weights: Dict[str, float]) -> str:
+        """
+        重み付きランダム選択
+        
+        Args:
+            weights: {選択肢: 重み} の辞書
+            
+        Returns:
+            str: 選択された項目
+        """
+        import random
+        random_value = random.random()
+        cumulative = 0.0
+        
+        for choice, weight in weights.items():
+            cumulative += weight
+            if random_value <= cumulative:
+                return choice
+                
+        # フォールバック（計算誤差対応）
+        return list(weights.keys())[-1]
+    
     def _build_graph(self) -> StateGraph:
         """LangGraph StateGraphを構築"""
         
         # Supervisor Node: どのエージェントを呼び出すかを決定
         def supervisor_node(state: DiscordState) -> Command[Literal["spectra_agent", "lynq_agent", "paz_agent", END]]:
-            """Supervisorノード: エージェント選択とルーティング"""
+            """Supervisorノード: エージェント選択とルーティング（Phase 9: チャンネル別発言比率対応）"""
             
-            # システムプロンプト
+            # Phase 9: メッセージタイプ確認
+            message_type = state.get("message_type", "normal")
+            channel_name = state.get("channel_name", "未設定")
+            
+            # Phase 9: チャンネル別エージェント発言比率
+            CHANNEL_PREFERENCES = {
+                "command-center": {"spectra": 0.40, "lynq": 0.30, "paz": 0.30},
+                "creation": {"paz": 0.50, "spectra": 0.25, "lynq": 0.25}, 
+                "development": {"lynq": 0.50, "spectra": 0.25, "paz": 0.25},
+                "lounge": {"spectra": 0.34, "lynq": 0.33, "paz": 0.33}
+            }
+            
+            # Phase 9: Tick処理の場合は確率的エージェント選択
+            if message_type == "tick":
+                preferences = CHANNEL_PREFERENCES.get(channel_name, 
+                    {"spectra": 0.33, "lynq": 0.33, "paz": 0.34})
+                
+                selected_agent_name = self._weighted_random_choice(preferences)
+                next_agent = f"{selected_agent_name}_agent"
+                
+                logger.info(f"Tick処理: {channel_name}で{selected_agent_name}を確率選択")
+                
+                return Command(
+                    goto=next_agent,
+                    update={"next_agent": next_agent, "current_agent": selected_agent_name}
+                )
+            
+            # 通常処理: LLMによるエージェント選択
             system_prompt = """あなたは3つのAIエージェントを管理するSupervisorです。
 
 エージェント:
@@ -153,7 +207,7 @@ class DiscordSupervisor:
             
             messages = [
                 SystemMessage(content=system_prompt.format(
-                    channel_name=state.get("channel_name", "未設定"),
+                    channel_name=channel_name,
                     task_description=state.get("task_description", "なし")
                 ))
             ] + state["messages"]

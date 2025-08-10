@@ -131,11 +131,11 @@ class SimplifiedDiscordManager:
         # システム状態
         self.running = False
         
-        # LangGraph Supervisor統合アプリ（プレースホルダー）
-        self.app = None  # build_langgraph_app() で初期化予定
+        # LangGraph Supervisor統合アプリ
+        self.app = None  # initialize_discord_system() で初期化
         
-        # メモリシステム（プレースホルダー）
-        self.memory_system = None  # OptimalMemorySystem() で初期化予定
+        # メモリシステム
+        self.memory_system = None  # initialize_discord_system() で初期化
         
         # メッセージプロセッサー
         self.message_processor = DiscordMessageProcessor(settings)
@@ -179,8 +179,8 @@ class SimplifiedDiscordManager:
                 # メッセージプロセッサーに委譲
                 await self.message_processor.process_message(message)
             except Exception as e:
-                logger.error(f"Message processing failed: {e}")
-                # エラー隔離：個別メッセージ処理失敗はシステム継続
+                logger.critical(f"致命的エラー: メッセージ処理失敗: {e}")
+                sys.exit(1)  # Fail-Fast: メッセージ処理失敗は即停止
         
         @client.event
         async def on_interaction(interaction):
@@ -188,11 +188,8 @@ class SimplifiedDiscordManager:
             try:
                 await self.command_processor.handle_slash_command(interaction)
             except Exception as e:
-                logger.error(f"Slash command processing failed: {e}")
-                await interaction.response.send_message(
-                    f"コマンド処理中にエラーが発生しました: {str(e)[:100]}",
-                    ephemeral=True
-                )
+                logger.critical(f"致命的エラー: スラッシュコマンド処理失敗: {e}")
+                sys.exit(1)  # Fail-Fast: コマンド処理失敗は即停止
     
     async def start(self):
         """Discord Manager 開始"""
@@ -222,7 +219,8 @@ class SimplifiedDiscordManager:
             logger.info("Discord Manager closed successfully")
             
         except Exception as e:
-            logger.error(f"Discord Manager close error: {e}")
+            logger.critical(f"致命的エラー: Discord Manager終了失敗: {e}")
+            sys.exit(1)  # Fail-Fast: 終了処理失敗は即停止
     
     async def send_as_agent(self, agent_name: str, channel_id: int, content: str):
         """
@@ -259,9 +257,8 @@ class SimplifiedDiscordManager:
             logger.info(f"Sent as {agent_name}: {content[:50]}...")
             
         except Exception as e:
-            error_msg = f"Message send failed for {agent_name}: {e}"
-            logger.error(error_msg)
-            raise MessageProcessingError(error_msg) from e
+            logger.critical(f"致命的エラー: {agent_name}メッセージ送信失敗: {e}")
+            sys.exit(1)  # Fail-Fast: メッセージ送信失敗は即停止
     
     def get_channel_id(self, channel_name: str) -> Optional[int]:
         """
@@ -304,11 +301,11 @@ class DiscordMessageProcessor:
         """
         self.settings = settings
         
-        # LangGraph Supervisor統合アプリ（プレースホルダー）
-        self.app = None  # build_langgraph_app() で初期化予定
+        # LangGraph Supervisor統合アプリ
+        self.app = None  # initialize_discord_system() で初期化
         
-        # メモリシステム（プレースホルダー）
-        self.memory_system = None  # OptimalMemorySystem() で初期化予定
+        # メモリシステム
+        self.memory_system = None  # initialize_discord_system() で初期化
         
         logger.info("DiscordMessageProcessor initialized")
     
@@ -344,8 +341,8 @@ class DiscordMessageProcessor:
             logger.info(f"Message processed: {message.author.name} in {message.channel.name}")
             
         except Exception as e:
-            # エラー隔離：個別メッセージ処理失敗はログ記録のみ
-            logger.error(f"Message processing error isolated: {e}")
+            logger.critical(f"致命的エラー: メッセージ処理失敗: {e}")
+            sys.exit(1)  # Fail-Fast: メッセージ処理失敗は即停止
 
 
 class SlashCommandProcessor:
@@ -414,12 +411,8 @@ class SlashCommandProcessor:
                 )
                 
         except Exception as e:
-            error_msg = f"Task command processing failed: {e}"
-            logger.error(error_msg)
-            await interaction.response.send_message(
-                f"コマンド処理エラー: {str(e)[:100]}",
-                ephemeral=True
-            )
+            logger.critical(f"致命的エラー: タスクコマンド処理失敗: {e}")
+            sys.exit(1)  # Fail-Fast: タスクコマンド処理失敗は即停止
     
     async def _handle_task_commit(
         self,
@@ -496,12 +489,8 @@ class SlashCommandProcessor:
                 )
                 
         except Exception as e:
-            error_msg = f"Task commit failed: {e}"
-            logger.error(error_msg)
-            await interaction.response.send_message(
-                content=f"タスク処理エラー: {str(e)[:100]}",
-                ephemeral=True
-            )
+            logger.critical(f"致命的エラー: タスクコミット処理失敗: {e}")
+            sys.exit(1)  # Fail-Fast: タスクコミット処理失敗は即停止
 
 
 class SimplifiedTickManager:
@@ -551,8 +540,27 @@ class SimplifiedTickManager:
         self.running = False
         logger.info("Tick管理停止")
     
+    def _should_process_tick(self) -> bool:
+        """
+        ティック処理実行判定（確率制御）
+        
+        Returns:
+            bool: 処理を実行すべきかどうか
+        """
+        # テスト環境では常に実行（100%確率）
+        if self.settings.env == "test":
+            return True
+        
+        # 本番環境では設定された確率で実行
+        return random.random() < self.settings.tick.tick_probability
+    
     async def _process_tick(self):
-        """ティック処理実行"""
+        """ティック処理実行（確率制御付き）"""
+        # 確率判定
+        if not self._should_process_tick():
+            logger.debug(f"Tick skipped (probability: {self.settings.tick.tick_probability})")
+            return
+        
         # 現在モード確認
         current_mode = get_current_mode()
         
@@ -687,12 +695,22 @@ async def initialize_discord_system() -> tuple[SimplifiedDiscordManager, Simplif
     discord_manager = get_discord_manager()
     tick_manager = get_tick_manager()
     
-    # LangGraph Supervisor統合（プレースホルダー）
-    # discord_manager.app = build_langgraph_app()
+    # LangGraph Supervisor統合（Fail-Fast原則）
+    try:
+        discord_manager.app = build_langgraph_app(get_settings())
+        logger.info("LangGraph Supervisor統合完了")
+    except Exception as e:
+        logger.critical(f"致命的エラー: LangGraph Supervisor統合失敗: {e}")
+        sys.exit(1)  # Fail-Fast: 統合失敗は即停止
     
-    # OptimalMemorySystem統合（プレースホルダー）
-    # discord_manager.memory_system = OptimalMemorySystem()
-    # tick_manager.memory_system = discord_manager.memory_system
+    # OptimalMemorySystem統合（Fail-Fast原則）
+    try:
+        discord_manager.memory_system = OptimalMemorySystem()
+        tick_manager.memory_system = discord_manager.memory_system
+        logger.info("OptimalMemorySystem統合完了")
+    except Exception as e:
+        logger.critical(f"致命的エラー: OptimalMemorySystem統合失敗: {e}")
+        sys.exit(1)  # Fail-Fast: メモリシステム統合失敗は即停止
     
     logger.info("Discord system initialized successfully")
     return discord_manager, tick_manager
