@@ -115,7 +115,7 @@ class GeminiAPIClient:
         """
         if self.chat_client is None:
             self.chat_client = ChatGoogleGenerativeAI(
-                model="gemini-pro",
+                model="gemini-2.0-flash-exp",
                 google_api_key=self.config.api_key,
                 temperature=0.0
             )
@@ -131,8 +131,7 @@ class GeminiAPIClient:
         if self.embeddings_client is None:
             self.embeddings_client = GoogleGenerativeAIEmbeddings(
                 model="models/gemini-embedding-001",
-                google_api_key=self.config.api_key,
-                client_options={"output_dimensionality": 1536}
+                google_api_key=self.config.api_key
             )
         return self.embeddings_client
     
@@ -197,8 +196,8 @@ class GeminiAPIClient:
         # クライアント初期化
         embeddings_client = self._ensure_embeddings_client()
         
-        # 埋め込み生成
-        result = embeddings_client.embed_query(text)
+        # 埋め込み生成（1536次元指定）
+        result = embeddings_client.embed_query(text, output_dimensionality=1536)
         
         return result
     
@@ -218,12 +217,12 @@ class GeminiAPIClient:
         # クライアント初期化
         embeddings_client = self._ensure_embeddings_client()
         
-        # 埋め込み生成（LangChainで非同期サポートある場合）
+        # 埋め込み生成（1536次元指定）
         if hasattr(embeddings_client, 'aembed_query'):
-            result = await embeddings_client.aembed_query(text)
+            result = await embeddings_client.aembed_query(text, output_dimensionality=1536)
         else:
             # フォールバック: 同期メソッド使用
-            result = embeddings_client.embed_query(text)
+            result = embeddings_client.embed_query(text, output_dimensionality=1536)
         
         return result
     
