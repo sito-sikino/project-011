@@ -27,7 +27,7 @@ import pytest
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 
 from app.core.settings import Settings, get_settings, reset_settings
-from app.core.logger import StructuredLogger, LogLevel, AgentType
+from app.core.logger import StructuredLogger, LogLevel, AgentType, SystemLog, ErrorLog
 from app.core.gemini_client import GeminiAPIClient, create_gemini_client, RateLimiter
 
 
@@ -47,6 +47,9 @@ class TestRealGeminiAPI:
         """各テスト前の初期化"""
         reset_settings()
         self.api_key = os.getenv("GEMINI_API_KEY")
+        
+        # StructuredLogger初期化
+        self.logger = StructuredLogger()
         
         # テスト用設定（実API Key使用）
         if self.api_key:
@@ -89,12 +92,14 @@ class TestRealGeminiAPI:
         assert isinstance(response, str)
             
         # ログ記録（Green Phase実装後に有効化）
-        # # self.logger.log(
-        #     level=LogLevel.INFO,
-        #     message="Basic chat connection test executed",
-        #     agent=AgentType.SYSTEM,
-        #     metadata={"test": "basic_connection"}
-        # )
+        self.logger.log_system(
+            SystemLog(
+                level=LogLevel.INFO,
+                module="test_gemini_api",
+                action="test_execution",
+                data={"test": "basic_connection", "message": "Basic chat connection test executed"}
+            )
+        )
     
     @pytest.mark.skipif(not os.getenv("GEMINI_API_KEY"), reason="GEMINI_API_KEY not set")
     def test_embedding_connection_success(self):
@@ -111,12 +116,14 @@ class TestRealGeminiAPI:
         assert all(isinstance(x, float) for x in result)
             
         # ログ記録（Green Phase実装後に有効化）
-        # self.logger.log(
-        #     level=LogLevel.INFO,
-        #     message="Embedding connection test executed",
-        #     agent=AgentType.SYSTEM,
-        #     metadata={"test": "embedding_connection"}
-        # )
+        self.logger.log_system(
+            SystemLog(
+                level=LogLevel.INFO,
+                module="test_gemini_api",
+                action="test_execution",
+                data={"test": "embedding_connection", "message": "Embedding connection test executed"}
+            )
+        )
     
     # ==========================================================================
     # 認証・API Key テスト
@@ -139,12 +146,14 @@ class TestRealGeminiAPI:
             # これは認証エラーになるはず（実装後）
             
         # ログ記録（Green Phase実装後に有効化）
-        # self.logger.log(
-        #     level=LogLevel.WARNING,
-        #     message="Authentication error test executed",
-        #     agent=AgentType.SYSTEM,
-        #     metadata={"test": "authentication_error", "expected": "auth_failure"}
-        # )
+        self.logger.log_system(
+            SystemLog(
+                level=LogLevel.WARNING,
+                module="test_gemini_api",
+                action="test_execution",
+                data={"test": "authentication_error", "expected": "auth_failure", "message": "Authentication error test executed"}
+            )
+        )
     
     def test_empty_api_key_error(self):
         """
@@ -162,12 +171,14 @@ class TestRealGeminiAPI:
             GeminiAPIClient(config)
             
         # ログ記録（Green Phase実装後に有効化）
-        # self.logger.log(
-        #     level=LogLevel.INFO,
-        #     message="Empty API key error test executed",
-        #     agent=AgentType.SYSTEM,
-        #     metadata={"test": "empty_api_key"}
-        # )
+        self.logger.log_system(
+            SystemLog(
+                level=LogLevel.INFO,
+                module="test_gemini_api",
+                action="test_execution",
+                data={"test": "empty_api_key", "message": "Empty API key error test executed"}
+            )
+        )
     
     # ==========================================================================
     # レート制限テスト（15req/min遵守）
@@ -212,16 +223,19 @@ class TestRealGeminiAPI:
             assert req_time['response_length'] > 0
             
         # ログ記録（Green Phase実装後に有効化）
-        # self.logger.log(
-        #     level=LogLevel.INFO,
-        #     message="Rate limit compliance test executed",
-        #     agent=AgentType.SYSTEM,
-        #     metadata={
-        #         "test": "rate_limit",
-        #         "rpm_limit": 15,
-        #         "expected_interval": 4.0
-        #     }
-        # )
+        self.logger.log_system(
+            SystemLog(
+                level=LogLevel.INFO,
+                module="test_gemini_api",
+                action="test_execution",
+                data={
+                    "test": "rate_limit",
+                    "rpm_limit": 15,
+                    "expected_interval": 4.0,
+                    "message": "Rate limit compliance test executed"
+                }
+            )
+        )
     
     @pytest.mark.skipif(not os.getenv("GEMINI_API_KEY"), reason="GEMINI_API_KEY not set")
     def test_concurrent_rate_limit_enforcement(self):
@@ -267,12 +281,14 @@ class TestRealGeminiAPI:
                     assert result['duration'] > 0
         
         # ログ記録（Green Phase実装後に有効化）
-        # self.logger.log(
-        #     level=LogLevel.INFO,
-        #     message="Concurrent rate limit test executed",
-        #     agent=AgentType.SYSTEM,
-        #     metadata={"test": "concurrent_rate_limit"}
-        # )
+        self.logger.log_system(
+            SystemLog(
+                level=LogLevel.INFO,
+                module="test_gemini_api",
+                action="test_execution",
+                data={"test": "concurrent_rate_limit", "message": "Concurrent rate limit test executed"}
+            )
+        )
     
     # ==========================================================================
     # 応答時間・パフォーマンステスト
@@ -300,15 +316,18 @@ class TestRealGeminiAPI:
         assert len(response) > 0, "Empty response received"
             
         # ログ記録（Green Phase実装後に有効化）
-        # self.logger.log(
-        #     level=LogLevel.INFO,
-        #     message="Response time measurement test executed",
-        #     agent=AgentType.SYSTEM,
-        #     metadata={
-        #         "test": "response_time",
-        #         "max_allowed": 30.0
-        #     }
-        # )
+        self.logger.log_system(
+            SystemLog(
+                level=LogLevel.INFO,
+                module="test_gemini_api",
+                action="test_execution",
+                data={
+                    "test": "response_time",
+                    "max_allowed": 30.0,
+                    "message": "Response time measurement test executed"
+                }
+            )
+        )
     
     @pytest.mark.skipif(not os.getenv("GEMINI_API_KEY"), reason="GEMINI_API_KEY not set")
     def test_large_request_performance(self):
@@ -339,16 +358,19 @@ class TestRealGeminiAPI:
             assert len(str(response)) > 0, "Empty response for large request"
             
         # ログ記録（Green Phase実装後に有効化）
-        # self.logger.log(
-        #     level=LogLevel.INFO,
-        #     message="Large request performance test executed",
-        #     agent=AgentType.SYSTEM,
-        #     metadata={
-        #         "test": "large_request_performance",
-        #         "prompt_length": 2000,  # 概算
-        #         "max_allowed": 60.0
-        #     }
-        # )
+        self.logger.log_system(
+            SystemLog(
+                level=LogLevel.INFO,
+                module="test_gemini_api",
+                action="test_execution",
+                data={
+                    "test": "large_request_performance",
+                    "prompt_length": 2000,  # 概算
+                    "max_allowed": 60.0,
+                    "message": "Large request performance test executed"
+                }
+            )
+        )
     
     # ==========================================================================
     # ネットワークエラー・APIエラーテスト
@@ -373,12 +395,14 @@ class TestRealGeminiAPI:
                 response = llm.invoke("Test network error")
                 
         # ログ記録（Green Phase実装後に有効化）
-        # self.logger.log(
-        #     level=LogLevel.ERROR,
-        #     message="Network error handling test executed",
-        #     agent=AgentType.SYSTEM,
-        #     metadata={"test": "network_error", "expected": "connection_failure"}
-        # )
+        self.logger.log_error(
+            ErrorLog(
+                error_type="TestError",
+                message="Network error handling test executed",
+                module="test_gemini_api",
+                context={"test": "network_error", "expected": "connection_failure"}
+            )
+        )
     
     def test_api_quota_exceeded_error(self):
         """
@@ -401,12 +425,14 @@ class TestRealGeminiAPI:
                 response = llm.invoke("Test quota error")
                 
         # ログ記録（Green Phase実装後に有効化）
-        # self.logger.log(
-        #     level=LogLevel.ERROR,
-        #     message="API quota error handling test executed",
-        #     agent=AgentType.SYSTEM,
-        #     metadata={"test": "quota_error", "expected": "quota_exceeded"}
-        # )
+        self.logger.log_error(
+            ErrorLog(
+                error_type="TestError",
+                message="API quota error handling test executed",
+                module="test_gemini_api",
+                context={"test": "quota_error", "expected": "quota_exceeded"}
+            )
+        )
     
     # ==========================================================================
     # 統合テスト（既存システムとの整合性）
@@ -434,12 +460,14 @@ class TestRealGeminiAPI:
             assert all(isinstance(x, float) for x in embedding_result), "Invalid embedding format"
             
         # ログ記録（Green Phase実装後に有効化）
-        # self.logger.log(
-        #     level=LogLevel.INFO,
-        #     message="Memory system integration test executed",
-        #     agent=AgentType.SYSTEM,
-        #     metadata={"test": "memory_integration"}
-        # )
+        self.logger.log_system(
+            SystemLog(
+                level=LogLevel.INFO,
+                module="test_gemini_api",
+                action="test_execution",
+                data={"test": "memory_integration", "message": "Memory system integration test executed"}
+            )
+        )
     
     @pytest.mark.skipif(not os.getenv("GEMINI_API_KEY"), reason="GEMINI_API_KEY not set")
     def test_report_system_integration(self):
@@ -462,12 +490,14 @@ class TestRealGeminiAPI:
             assert hasattr(generator.llm, 'invoke'), "LLM missing invoke method"
             
         # ログ記録（Green Phase実装後に有効化）
-        # self.logger.log(
-        #     level=LogLevel.INFO,
-        #     message="Report system integration test executed",
-        #     agent=AgentType.SYSTEM,
-        #     metadata={"test": "report_integration"}
-        # )
+        self.logger.log_system(
+            SystemLog(
+                level=LogLevel.INFO,
+                module="test_gemini_api",
+                action="test_execution",
+                data={"test": "report_integration", "message": "Report system integration test executed"}
+            )
+        )
     
     # ==========================================================================
     # エラーハンドリング・ロバストネステスト
@@ -488,12 +518,14 @@ class TestRealGeminiAPI:
             response = llm.invoke("Test invalid model")
             
         # ログ記録（Green Phase実装後に有効化）
-        # self.logger.log(
-        #     level=LogLevel.ERROR,
-        #     message="Invalid model error test executed",
-        #     agent=AgentType.SYSTEM,
-        #     metadata={"test": "invalid_model", "model": "invalid-model-name"}
-        # )
+        self.logger.log_error(
+            ErrorLog(
+                error_type="TestError",
+                message="Invalid model error test executed",
+                module="test_gemini_api",
+                context={"test": "invalid_model", "model": "invalid-model-name"}
+            )
+        )
     
     def test_malformed_request_error(self):
         """
@@ -511,15 +543,17 @@ class TestRealGeminiAPI:
             response = llm.invoke("Test malformed request")
             
         # ログ記録（Green Phase実装後に有効化）
-        # self.logger.log(
-        #     level=LogLevel.ERROR,
-        #     message="Malformed request error test executed",
-        #     agent=AgentType.SYSTEM,
-        #     metadata={
-        #         "test": "malformed_request",
-        #         "params": {"temperature": 2.0, "max_tokens": -100}
-        #     }
-        # )
+        self.logger.log_error(
+            ErrorLog(
+                error_type="TestError",
+                message="Malformed request error test executed",
+                module="test_gemini_api",
+                context={
+                    "test": "malformed_request",
+                    "params": {"temperature": 2.0, "max_tokens": -100}
+                }
+            )
+        )
     
     # ==========================================================================
     # CI/CD・実行環境テスト
@@ -535,22 +569,24 @@ class TestRealGeminiAPI:
         
         if has_api_key:
             # ログ記録（Green Phase実装後に有効化）
-            # self.logger.log(
-            #     level=LogLevel.INFO,
-            #     message="Real API key detected - full tests enabled",
-            #     agent=AgentType.SYSTEM,
-            #     metadata={"api_key_present": True}
-            # )
-            pass
+            self.logger.log_system(
+                SystemLog(
+                    level=LogLevel.INFO,
+                    module="test_gemini_api",
+                    action="environment_detection",
+                    data={"api_key_present": True, "message": "Real API key detected - full tests enabled"}
+                )
+            )
         else:
             # ログ記録（Green Phase実装後に有効化）
-            # self.logger.log(
-            #     level=LogLevel.WARNING,
-            #     message="No API key - tests will be skipped",
-            #     agent=AgentType.SYSTEM,
-            #     metadata={"api_key_present": False}
-            # )
-            pass
+            self.logger.log_system(
+                SystemLog(
+                    level=LogLevel.WARNING,
+                    module="test_gemini_api",
+                    action="environment_detection",
+                    data={"api_key_present": False, "message": "No API key - tests will be skipped"}
+                )
+            )
         
         # 環境変数確認
         expected_vars = ["GEMINI_API_KEY", "GEMINI_REQUESTS_PER_MINUTE"]
@@ -558,13 +594,14 @@ class TestRealGeminiAPI:
         
         if missing_vars:
             # ログ記録（Green Phase実装後に有効化）
-            # self.logger.log(
-            #     level=LogLevel.WARNING,
-            #     message=f"Missing environment variables: {missing_vars}",
-            #     agent=AgentType.SYSTEM,
-            #     metadata={"missing_vars": missing_vars}
-            # )
-            pass
+            self.logger.log_system(
+                SystemLog(
+                    level=LogLevel.WARNING,
+                    module="test_gemini_api",
+                    action="environment_validation",
+                    data={"missing_vars": missing_vars, "message": f"Missing environment variables: {missing_vars}"}
+                )
+            )
     
     def test_settings_validation(self):
         """
@@ -579,15 +616,18 @@ class TestRealGeminiAPI:
             assert self.settings.gemini.api_key == self.api_key, "API key mismatch"
         
         # ログ記録（Green Phase実装後に有効化）
-        # self.logger.log(
-        #     level=LogLevel.INFO,
-        #     message="Settings validation test completed",
-        #     agent=AgentType.SYSTEM,
-        #     metadata={
-        #         "rpm_setting": self.settings.gemini.requests_per_minute,
-        #         "api_key_set": bool(self.settings.gemini.api_key)
-        #     }
-        # )
+        self.logger.log_system(
+            SystemLog(
+                level=LogLevel.INFO,
+                module="test_gemini_api",
+                action="settings_validation",
+                data={
+                    "rpm_setting": self.settings.gemini.requests_per_minute,
+                    "api_key_set": bool(self.settings.gemini.api_key),
+                    "message": "Settings validation test completed"
+                }
+            )
+        )
 
 
 # ==========================================================================
