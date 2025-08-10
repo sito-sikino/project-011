@@ -24,10 +24,88 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_postgres import PGVectorStore, PGEngine
 from langchain_core.messages import HumanMessage
 from langchain_core.documents import Document
+from langchain_core.embeddings import Embeddings
 
 from app.core.settings import get_settings
 
 logger = logging.getLogger(__name__)
+
+
+class Optimal1536DimensionEmbeddings(Embeddings):
+    """
+    1536次元保証のカスタムEmbeddingsクラス
+    
+    GoogleGenerativeAIEmbeddingsをラップして、常に1536次元を返すように強制
+    PGVectorStore統合での確実な1536次元保証
+    """
+    
+    def __init__(self, google_api_key: str):
+        """
+        初期化
+        
+        Args:
+            google_api_key: Gemini API Key
+        """
+        self.base_embeddings = GoogleGenerativeAIEmbeddings(
+            model="models/gemini-embedding-001",
+            google_api_key=google_api_key
+        )
+    
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        """
+        複数文書の埋め込み生成（1536次元保証）
+        
+        Args:
+            texts: 文書リスト
+            
+        Returns:
+            List[List[float]]: 1536次元埋め込みリスト
+        """
+        return self.base_embeddings.embed_documents(texts, output_dimensionality=1536)
+    
+    def embed_query(self, text: str) -> List[float]:
+        """
+        クエリ埋め込み生成（1536次元保証）
+        
+        Args:
+            text: クエリテキスト
+            
+        Returns:
+            List[float]: 1536次元埋め込み
+        """
+        return self.base_embeddings.embed_query(text, output_dimensionality=1536)
+    
+    async def aembed_documents(self, texts: List[str]) -> List[List[float]]:
+        """
+        複数文書の埋め込み生成（非同期・1536次元保証）
+        
+        Args:
+            texts: 文書リスト
+            
+        Returns:
+            List[List[float]]: 1536次元埋め込みリスト
+        """
+        if hasattr(self.base_embeddings, 'aembed_documents'):
+            return await self.base_embeddings.aembed_documents(texts, output_dimensionality=1536)
+        else:
+            # フォールバック: 同期版使用
+            return self.base_embeddings.embed_documents(texts, output_dimensionality=1536)
+    
+    async def aembed_query(self, text: str) -> List[float]:
+        """
+        クエリ埋め込み生成（非同期・1536次元保証）
+        
+        Args:
+            text: クエリテキスト
+            
+        Returns:
+            List[float]: 1536次元埋め込み
+        """
+        if hasattr(self.base_embeddings, 'aembed_query'):
+            return await self.base_embeddings.aembed_query(text, output_dimensionality=1536)
+        else:
+            # フォールバック: 同期版使用
+            return self.base_embeddings.embed_query(text, output_dimensionality=1536)
 
 
 class OptimalMemorySystem:
@@ -77,11 +155,9 @@ class OptimalMemorySystem:
                 ttl=86400  # 24時間自動削除
             )
             
-            # 埋め込みサービス初期化
-            self.embeddings = GoogleGenerativeAIEmbeddings(
-                model="models/gemini-embedding-001",
-                google_api_key=settings.gemini.api_key,
-                client_options={"output_dimensionality": 1536}
+            # 埋め込みサービス初期化（1536次元保証）
+            self.embeddings = Optimal1536DimensionEmbeddings(
+                google_api_key=settings.gemini.api_key
             )
             
             # 長期記憶は別途初期化（initialize_long_term()で実行）
