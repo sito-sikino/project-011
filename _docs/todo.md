@@ -297,15 +297,62 @@
   - 依存: 全Phase完了
   - **完了日**: 2025-08-10 (E2E統合テスト完全実装、15テストケース、10個成功、Fail-Fast原則100%準拠確認)
 
-- [ ] ログ・モニタリング実装
-  - 受け入れ条件: エラーログ、性能メトリクス記録
-  - 優先度: 低
-  - 依存: 統合テスト
+### 10.2 一元化ログシステム
+- [ ] StructuredLogger基盤実装
+  - 受け入れ条件: app/core/logger.py作成、DiscordMessageLog・SystemLog・ErrorLogの3種類ログ構造定義、JSON形式ファイル出力・ローテーション機能
+  - 優先度: 高
+  - 依存: settings.py
+  - TDD設計: 🔴ログ形式・出力・ローテーションテスト先行 → 🟢最小実装 → 🟡logging標準ライブラリ統合
 
-- [ ] デプロイ準備
-  - 受け入れ条件: VPS設定手順書、systemdサービス定義
+- [ ] Discord会話履歴ログ統合
+  - 受け入れ条件: SimplifiedDiscordManagerログ機能統合、メッセージ受信・送信時の自動構造化ログ記録、OptimalMemorySystem連携
+  - 優先度: 高
+  - 依存: StructuredLogger基盤、SimplifiedDiscordManager
+  - TDD設計: 🔴Discord統合ログテスト先行 → 🟢on_message/send_messageフック → 🟡非同期処理最適化
+
+- [ ] システム・エラーログ集約
+  - 受け入れ条件: 既存logging.error()の構造化ログ置換、LangGraph・Database・Task・Memory系エラー統合、Fail-Fast原則（ログ記録後sys.exit(1)）
+  - 優先度: 高
+  - 依存: StructuredLogger基盤、全システムモジュール
+  - TDD設計: 🔴エラーログ集約テスト先行 → 🟢ログハンドラー統合・既存コード置換 → 🟡パフォーマンス影響最小化
+
+### 10.3 実API統合テスト
+- [ ] Gemini API実接続テスト
+  - 受け入れ条件: tests/test_real_api_gemini.py作成、実GEMINI_API_KEY使用接続テスト、RPM制限（15req/min）内応答時間測定、APIエラー時適切失敗動作確認
+  - 優先度: 最高
+  - 依存: GeminiConfig、実API Key
+  - TDD設計: 🔴実API接続失敗テスト先行 → 🟢google-genai統合・RPM制限実装 → 🟡エラーハンドリング強化
+
+- [ ] Discord Bot実接続テスト
+  - 受け入れ条件: tests/test_real_api_discord.py作成、テスト用Discordチャンネル実Bot動作確認、3体Bot独立接続テスト、Discord API制限遵守
+  - 優先度: 最高
+  - 依存: DiscordConfig、実Bot Token、テスト用チャンネル
+  - TDD設計: 🔴実Discord接続失敗テスト先行 → 🟢テスト用チャンネル統合・動作確認 → 🟡Rate Limit監視・接続安定性向上
+
+- [ ] 統合システム負荷テスト
+  - 受け入れ条件: tests/test_real_system_load.py作成、15分間連続動作テスト（実RPM制限内）、メモリリーク検出、DB接続プール・Redis安定性確認
+  - 優先度: 高
+  - 依存: Gemini API・Discord Bot実接続テスト、全システム統合
+  - TDD設計: 🔴負荷・安定性テスト先行 → 🟢長時間動作テスト実装 → 🟡リソース監視精度向上
+
+### 10.4 VPS デプロイ準備
+- [ ] systemdサービス定義
+  - 受け入れ条件: deploy/discord-multi-agent.service作成、venv Python自動起動設定、異常終了時自動再起動（最大3回）、journald統合、非rootユーザー実行
   - 優先度: 中
-  - 依存: 全機能完成
+  - 依存: なし
+  - TDD設計: 🔴systemdサービステスト先行 → 🟢基本サービス定義実装 → 🟡セキュリティ設定最適化
+
+- [ ] 環境構築自動化スクリプト
+  - 受け入れ条件: scripts/deploy_setup.sh作成、VPS初期設定自動化、.env安全配置手順、データベース自動インストール・設定、ファイアウォール設定
+  - 優先度: 中
+  - 依存: systemdサービス定義
+  - TDD設計: 🔴デプロイスクリプトテスト先行 → 🟢基本自動化スクリプト実装 → 🟡エラーハンドリング・ロールバック機能
+
+- [ ] 運用監視・バックアップ設定
+  - 受け入れ条件: health_check.sh・backup.sh・log_rotation.sh作成、cron設定例、運用手順書、Fail-Fast監視（異常検出時即通知・停止）
+  - 優先度: 中
+  - 依存: systemdサービス定義、環境構築自動化、一元化ログシステム
+  - TDD設計: 🔴運用スクリプトテスト先行 → 🟢基本運用機能実装 → 🟡運用効率・信頼性向上
 
 ## 設定項目一覧
 
@@ -326,11 +373,28 @@ DATABASE_URL=postgresql://user:pass@postgres:5432/dbname
 # Environment
 ENV=development
 LOG_LEVEL=INFO
+
+# Phase 10.2: ログ設定
+LOG_DISCORD_LOG_PATH=logs/discord.jsonl
+LOG_SYSTEM_LOG_PATH=logs/system.jsonl
+LOG_ERROR_LOG_PATH=logs/error.jsonl
+LOG_CONSOLE_LEVEL=INFO
+LOG_FILE_LEVEL=DEBUG
+
+# Phase 10.4: デプロイ設定
+DEPLOY_SERVICE_USER=discord-bot
+DEPLOY_HEALTH_CHECK_INTERVAL_MIN=5
+DEPLOY_BACKUP_INTERVAL_HOURS=6
+
+# Phase 10.3: 実API テスト用
+REAL_API_TEST_CHANNEL_ID=
+REAL_API_TEST_ENABLED=false
 ```
 
-### settings.py構造
+### settings.py構造（Phase 10拡張）
 ```python
 class Settings(BaseSettings):
+    # Phase 1-9完了済み
     discord: DiscordConfig
     gemini: GeminiConfig
     database: DatabaseConfig
@@ -340,6 +404,42 @@ class Settings(BaseSettings):
     agent: AgentConfig
     channel: ChannelConfig
     report: ReportConfig
+    task: TaskConfig
+    
+    # Phase 10新規追加
+    log: LogConfig        # 10.2 一元化ログシステム用
+    deploy: DeployConfig  # 10.4 VPS デプロイ準備用
+```
+
+### Phase 10新規設定クラス
+```python
+class LogConfig(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="LOG_")
+    
+    # ログファイルパス
+    discord_log_path: str = Field(default="logs/discord.jsonl")
+    system_log_path: str = Field(default="logs/system.jsonl") 
+    error_log_path: str = Field(default="logs/error.jsonl")
+    
+    # ローテーション設定
+    max_file_size_mb: int = Field(default=10, ge=1, le=100)
+    backup_count: int = Field(default=5, ge=1, le=30)
+    
+    # ログレベル
+    console_level: str = Field(default="INFO")
+    file_level: str = Field(default="DEBUG")
+
+class DeployConfig(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="DEPLOY_")
+    
+    # systemd設定
+    service_user: str = Field(default="discord-bot")
+    restart_limit: int = Field(default=3, ge=1, le=10)
+    restart_delay_sec: int = Field(default=30, ge=5, le=300)
+    
+    # 監視設定
+    health_check_interval_min: int = Field(default=5, ge=1, le=60)
+    backup_interval_hours: int = Field(default=6, ge=1, le=48)
 ```
 
 ## 実装順序の原則

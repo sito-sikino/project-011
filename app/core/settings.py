@@ -361,6 +361,59 @@ class TaskConfig(BaseSettings):
     )
 
 
+class LogConfig(BaseSettings):
+    """
+    StructuredLogger関連設定
+    
+    JSON形式ログファイル出力、ローテーション制御設定
+    Phase 10.2.1: 一元化ログシステム
+    """
+    model_config = SettingsConfigDict(
+        env_prefix="LOG_", 
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+    
+    # ログファイルパス
+    discord_log_path: str = Field(
+        default="logs/discord.jsonl",
+        description="Discordメッセージログファイルパス"
+    )
+    system_log_path: str = Field(
+        default="logs/system.jsonl", 
+        description="システムログファイルパス"
+    )
+    error_log_path: str = Field(
+        default="logs/error.jsonl",
+        description="エラーログファイルパス"
+    )
+    
+    # ローテーション設定
+    max_file_size_mb: int = Field(
+        default=10, 
+        ge=1, 
+        le=100,
+        description="ログファイル最大サイズ（MB）"
+    )
+    backup_count: int = Field(
+        default=5, 
+        ge=1, 
+        le=30,
+        description="ローテーション時のバックアップ数"
+    )
+    
+    # ログレベル
+    console_level: str = Field(
+        default="INFO",
+        description="コンソール出力レベル"
+    )
+    file_level: str = Field(
+        default="DEBUG",
+        description="ファイル出力レベル"
+    )
+
+
 class Settings(BaseSettings):
     """
     Discord Multi-Agent System メイン設定クラス
@@ -483,6 +536,7 @@ class Settings(BaseSettings):
     channel: ChannelConfig = Field(default_factory=ChannelConfig)
     report: ReportConfig = Field(default_factory=ReportConfig)
     task: TaskConfig = Field(default_factory=TaskConfig)
+    log: LogConfig = Field(default_factory=LogConfig)
 
 
 # グローバル設定インスタンス（シングルトンパターン）
