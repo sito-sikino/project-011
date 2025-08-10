@@ -179,17 +179,14 @@ class DatabaseManager:
                 logger.debug(f"Query executed successfully: {result}")
                 return result
             except asyncpg.PostgresSyntaxError as e:
-                error_msg = f"SQL syntax error: {e}"
-                logger.error(error_msg)
-                raise QueryError(error_msg) from e
+                from app.core.error_handler import handle_database_error
+                handle_database_error(e, operation="query_execute")
             except asyncpg.PostgresError as e:
-                error_msg = f"PostgreSQL error: {e}"
-                logger.error(error_msg)
-                raise QueryError(error_msg) from e
+                from app.core.error_handler import handle_database_error
+                handle_database_error(e, operation="query_execute")
             except Exception as e:
-                error_msg = f"Query execution failed: {e}"
-                logger.error(error_msg)
-                raise QueryError(error_msg) from e
+                from app.core.error_handler import handle_database_error
+                handle_database_error(e, operation="query_execute")
     
     async def fetch(self, query: str, *args) -> List[Dict[str, Any]]:
         """
@@ -214,8 +211,8 @@ class DatabaseManager:
                 rows = await conn.fetch(query, *args)
                 return [dict(row) for row in rows]
             except Exception as e:
-                logger.error(f"Fetch query failed: {e}")
-                raise
+                from app.core.error_handler import handle_database_error
+                handle_database_error(e, operation="fetch_query")
     
     async def fetchval(self, query: str, *args) -> Any:
         """
@@ -240,8 +237,8 @@ class DatabaseManager:
                 result = await conn.fetchval(query, *args)
                 return result
             except Exception as e:
-                logger.error(f"Fetchval query failed: {e}")
-                raise
+                from app.core.error_handler import handle_database_error
+                handle_database_error(e, operation="fetchval_query")
     
     async def check_pgvector_extension(self) -> bool:
         """
@@ -378,8 +375,8 @@ class DatabaseManager:
                 result = await conn.fetchval("SELECT 1")
                 return result == 1
         except Exception as e:
-            logger.error(f"Database health check failed: {e}")
-            return False
+            from app.core.error_handler import handle_database_error
+            handle_database_error(e, operation="health_check")
 
 
 # シングルトンパターンでDatabaseManager管理
@@ -473,9 +470,8 @@ async def run_migrations() -> None:
         logger.info("All database migrations applied successfully")
         
     except Exception as e:
-        error_msg = f"Migration execution failed: {e}"
-        logger.error(error_msg)
-        raise InitializationError(error_msg) from e
+        from app.core.error_handler import handle_database_error
+        handle_database_error(e, operation="migration_execution")
 
 
 async def rollback_migration(version: str) -> None:
@@ -495,9 +491,8 @@ async def rollback_migration(version: str) -> None:
         logger.info(f"Migration {version} rolled back successfully")
         
     except Exception as e:
-        error_msg = f"Migration rollback failed: {e}"
-        logger.error(error_msg)
-        raise QueryError(error_msg) from e
+        from app.core.error_handler import handle_database_error
+        handle_database_error(e, operation="migration_rollback")
 
 
 async def check_migration_status() -> List[Dict[str, Any]]:
@@ -516,8 +511,8 @@ async def check_migration_status() -> List[Dict[str, Any]]:
         return await migration_manager.get_applied_migrations()
         
     except Exception as e:
-        logger.error(f"Migration status check failed: {e}")
-        return []
+        from app.core.error_handler import handle_database_error
+        handle_database_error(e, operation="migration_status_check")
 
 
 def validate_connection_url(url: str) -> bool:
@@ -556,5 +551,5 @@ async def test_database_connection() -> bool:
         await db_manager.close()
         return result
     except Exception as e:
-        logger.error(f"Database connection test failed: {e}")
-        return False
+        from app.core.error_handler import handle_database_error
+        handle_database_error(e, operation="connection_test")

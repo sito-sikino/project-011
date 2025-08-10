@@ -523,8 +523,8 @@ class Settings(BaseSettings):
         missing = self.get_missing_required_vars()
         if missing and self.env not in ["testing", "development"]:
             error_msg = f"Required environment variables are missing: {', '.join(missing)}"
-            logging.error(error_msg)
-            raise ValueError(error_msg)
+            from app.core.error_handler import settings_log_and_exit
+            settings_log_and_exit(error_msg, operation="validation")
     
     discord: DiscordConfig = Field(default_factory=DiscordConfig)
     gemini: GeminiConfig = Field(default_factory=GeminiConfig)

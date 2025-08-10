@@ -90,8 +90,8 @@ class OptimalMemorySystem:
             logger.info("OptimalMemorySystem initialized successfully")
             
         except Exception as e:
-            logger.error(f"OptimalMemorySystem initialization failed: {e}")
-            raise
+            from app.core.error_handler import handle_memory_error
+            handle_memory_error(e, operation="initialization")
     
     async def initialize_long_term(self):
         """長期記憶（PostgreSQL+pgvector）初期化
@@ -120,8 +120,8 @@ class OptimalMemorySystem:
             logger.info("Long-term memory initialized successfully")
             
         except Exception as e:
-            logger.error(f"Long-term memory initialization failed: {e}")
-            raise
+            from app.core.error_handler import handle_memory_error
+            handle_memory_error(e, operation="long_term_initialization")
     
     async def add_message(self, content: str, agent: str, channel: str) -> None:
         """メッセージ追加
@@ -153,8 +153,8 @@ class OptimalMemorySystem:
             logger.debug(f"Message added from {agent} in {channel}: {content[:50]}...")
             
         except Exception as e:
-            logger.error(f"Failed to add message from {agent}: {e}")
-            raise
+            from app.core.error_handler import handle_memory_error
+            handle_memory_error(e, operation="add_message")
     
     async def get_recent_context(self, limit: int = 10) -> List[dict]:
         """直近コンテキスト取得
@@ -190,8 +190,8 @@ class OptimalMemorySystem:
             return context
             
         except Exception as e:
-            logger.error(f"Failed to get recent context: {e}")
-            return []
+            from app.core.error_handler import handle_memory_error
+            handle_memory_error(e, operation="get_recent_context")
     
     async def semantic_search(self, query: str, limit: int = 5) -> List[dict]:
         """セマンティック検索
@@ -233,8 +233,8 @@ class OptimalMemorySystem:
             return search_results
             
         except Exception as e:
-            logger.error(f"Semantic search failed for query '{query}': {e}")
-            raise
+            from app.core.error_handler import handle_memory_error
+            handle_memory_error(e, operation="semantic_search")
     
     async def daily_report_migration(self) -> int:
         """日報処理時のデータ移行
@@ -286,8 +286,8 @@ class OptimalMemorySystem:
             return message_count
             
         except Exception as e:
-            logger.error(f"Daily migration failed: {e}")
-            raise
+            from app.core.error_handler import handle_memory_error
+            handle_memory_error(e, operation="daily_migration")
     
     async def get_statistics(self) -> dict:
         """24時間メモリ統計
@@ -324,5 +324,5 @@ class OptimalMemorySystem:
             return stats
             
         except Exception as e:
-            logger.error(f"Failed to generate statistics: {e}")
-            return {"total": 0, "by_channel": {}, "by_agent": {}}
+            from app.core.error_handler import handle_memory_error
+            handle_memory_error(e, operation="get_statistics")

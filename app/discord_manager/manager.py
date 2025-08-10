@@ -188,8 +188,8 @@ class SimplifiedDiscordManager:
                 # メッセージプロセッサーに委譲
                 await self.message_processor.process_message(message)
             except Exception as e:
-                logger.critical(f"致命的エラー: メッセージ処理失敗: {e}")
-                sys.exit(1)  # Fail-Fast: メッセージ処理失敗は即停止
+                from app.core.error_handler import handle_discord_error
+                handle_discord_error(e, operation="message_processing")
 
         @client.event
         async def on_interaction(interaction):
@@ -197,8 +197,8 @@ class SimplifiedDiscordManager:
             try:
                 await self.command_processor.handle_slash_command(interaction)
             except Exception as e:
-                logger.critical(f"致命的エラー: スラッシュコマンド処理失敗: {e}")
-                sys.exit(1)  # Fail-Fast: コマンド処理失敗は即停止
+                from app.core.error_handler import handle_discord_error
+                handle_discord_error(e, operation="slash_command_processing")
 
     async def start(self):
         """Discord Manager 開始"""
@@ -210,10 +210,8 @@ class SimplifiedDiscordManager:
             await self.clients[self.primary_client].start(primary_token)
 
         except Exception as e:
-            error_msg = f"Discord Manager startup failed: {e}"
-            logger.critical(error_msg)
-            self.running = False
-            raise BotConnectionError(error_msg) from e
+            from app.core.error_handler import handle_discord_error
+            handle_discord_error(e, operation="manager_startup")
 
     async def close(self):
         """Discord Manager 終了"""
@@ -278,8 +276,8 @@ class SimplifiedDiscordManager:
             logger.info(f"Sent as {agent_name}: {content[:50]}...")
 
         except Exception as e:
-            logger.critical(f"致命的エラー: {agent_name}メッセージ送信失敗: {e}")
-            sys.exit(1)  # Fail-Fast: メッセージ送信失敗は即停止
+            from app.core.error_handler import handle_discord_error
+            handle_discord_error(e, operation="message_send", agent=agent_name)
 
     def get_channel_id(self, channel_name: str) -> Optional[int]:
         """
@@ -385,8 +383,8 @@ class DiscordMessageProcessor:
             )
 
         except Exception as e:
-            logger.critical(f"致命的エラー: メッセージ処理失敗: {e}")
-            sys.exit(1)  # Fail-Fast: メッセージ処理失敗は即停止
+            from app.core.error_handler import handle_discord_error
+            handle_discord_error(e, operation="message_processing")
 
 
 class SlashCommandProcessor:
@@ -748,8 +746,8 @@ async def initialize_discord_system() -> (
         discord_manager.app = build_langgraph_app(get_settings())
         logger.info("LangGraph Supervisor統合完了")
     except Exception as e:
-        logger.critical(f"致命的エラー: LangGraph Supervisor統合失敗: {e}")
-        sys.exit(1)  # Fail-Fast: 統合失敗は即停止
+        from app.core.error_handler import handle_discord_error
+        handle_discord_error(e, operation="langgraph_integration")
 
     # OptimalMemorySystem統合（Fail-Fast原則）
     try:
@@ -757,8 +755,8 @@ async def initialize_discord_system() -> (
         tick_manager.memory_system = discord_manager.memory_system
         logger.info("OptimalMemorySystem統合完了")
     except Exception as e:
-        logger.critical(f"致命的エラー: OptimalMemorySystem統合失敗: {e}")
-        sys.exit(1)  # Fail-Fast: メモリシステム統合失敗は即停止
+        from app.core.error_handler import handle_discord_error
+        handle_discord_error(e, operation="memory_system_integration")
 
     logger.info("Discord system initialized successfully")
     return discord_manager, tick_manager

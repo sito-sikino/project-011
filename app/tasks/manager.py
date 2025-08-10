@@ -244,9 +244,8 @@ class TaskManager:
             logger.info("TaskManager connections initialized successfully")
             
         except Exception as e:
-            error_msg = f"TaskManager initialization failed: {e}"
-            logger.critical(error_msg)
-            raise TaskError(error_msg) from e
+            from app.core.error_handler import handle_task_error
+            handle_task_error(e, operation="manager_initialization")
     
     async def close(self) -> None:
         """
@@ -372,8 +371,8 @@ class TaskManager:
                 return TaskModel(**row)
             return None
         except Exception as e:
-            logger.error(f"Database task retrieval failed: {e}")
-            return None
+            from app.core.error_handler import handle_task_error
+            handle_task_error(e, operation="database_task_retrieval")
     
     async def get_tasks_by_status(self, status: TaskStatus) -> List[TaskModel]:
         """ステータス別タスク取得"""
@@ -701,8 +700,8 @@ class TaskManager:
             )
             
         except Exception as e:
-            logger.error(f"Database task save failed: {e}")
-            raise  # データベース保存失敗は重要エラー
+            from app.core.error_handler import handle_task_error
+            handle_task_error(e, operation="database_task_save")
 
 
 # RedisTaskQueue Implementation

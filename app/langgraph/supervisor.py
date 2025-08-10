@@ -100,14 +100,8 @@ def send_to_discord_tool(
         return Command(update={"messages": state["messages"] + [error_message]})
         
     except Exception as e:
-        logger.error(f"Discord送信エラー: {e}")
-        error_message = {
-            "role": "tool",
-            "content": f"❌ Discord送信エラー: {str(e)}",
-            "name": "send_to_discord_tool", 
-            "tool_call_id": tool_call_id,
-        }
-        return Command(update={"messages": state["messages"] + [error_message]})
+        from app.core.error_handler import handle_discord_error
+        handle_discord_error(e, operation="send_to_discord_tool")
 
 
 class DiscordSupervisor:
@@ -235,8 +229,8 @@ class DiscordSupervisor:
                 )
                 
             except Exception as e:
-                logger.error(f"Supervisor error: {e}")
-                return Command(goto=END)
+                from app.core.error_handler import handle_langgraph_error
+                handle_langgraph_error(e, agent="supervisor", operation="agent_selection")
         
         # Spectra Agent Node
         def spectra_agent_node(state: DiscordState) -> Command[Literal["supervisor"]]:
@@ -286,8 +280,8 @@ class DiscordSupervisor:
                 )
                 
             except Exception as e:
-                logger.error(f"Spectra agent error: {e}")
-                return Command(goto="supervisor")
+                from app.core.error_handler import handle_langgraph_error
+                handle_langgraph_error(e, agent="spectra", operation="agent_invoke")
         
         # LynQ Agent Node  
         def lynq_agent_node(state: DiscordState) -> Command[Literal["supervisor"]]:
@@ -336,8 +330,8 @@ class DiscordSupervisor:
                 )
                 
             except Exception as e:
-                logger.error(f"LynQ agent error: {e}")
-                return Command(goto="supervisor")
+                from app.core.error_handler import handle_langgraph_error
+                handle_langgraph_error(e, agent="lynq", operation="agent_invoke")
         
         # Paz Agent Node
         def paz_agent_node(state: DiscordState) -> Command[Literal["supervisor"]]:
@@ -386,8 +380,8 @@ class DiscordSupervisor:
                 )
                 
             except Exception as e:
-                logger.error(f"Paz agent error: {e}")
-                return Command(goto="supervisor")
+                from app.core.error_handler import handle_langgraph_error
+                handle_langgraph_error(e, agent="paz", operation="agent_invoke")
         
         # StateGraph構築
         builder = StateGraph(DiscordState)
@@ -435,11 +429,8 @@ class DiscordSupervisor:
             return result
             
         except Exception as e:
-            logger.error(f"LangGraph Supervisor error: {e}")
-            return {
-                "error": str(e),
-                "status": "failed"
-            }
+            from app.core.error_handler import handle_langgraph_error
+            handle_langgraph_error(e, agent="supervisor", operation="ainvoke")
 
 
 def build_langgraph_app(settings: Settings = None) -> DiscordSupervisor:
